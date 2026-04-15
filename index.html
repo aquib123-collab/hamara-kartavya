@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hamara Kartavya - Firebase Working</title>
+<style>
+body{margin:0;font-family:Segoe UI;background:#eef6ee}
+header{background:#2e7d32;color:white;text-align:center;padding:20px}
+.container{max-width:1000px;margin:auto;padding:20px}
+.card{background:white;padding:15px;border-radius:10px;margin:10px 0}
+button{padding:10px;background:#43a047;color:white;border:none;border-radius:5px;cursor:pointer}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;border:1px solid #ddd;text-align:center}
+th{background:#43a047;color:white}
+</style>
+</head>
+<body>
+<header>
+<h1>🌱 HAMARA KARTAVYA</h1>
+<p>Live Civic Platform</p>
+</header>
+
+<div class="container">
+<div class="card">
+<button id="loginBtn">Login with Google</button>
+<p id="user"></p>
+</div>
+
+<div class="card">
+<h3>Points: <span id="points">0</span></h3>
+<button id="clean">Clean Area +20</button>
+<button id="plant">Plant Tree +30</button>
+</div>
+
+<div class="card">
+<h2>🌍 Live Leaderboard</h2>
+<table id="board"></table>
+</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+console.log("Script running ✅");
+
+// 🔥 YOUR REAL CONFIG HERE
+const firebaseConfig = {
+  apiKey: "PASTE_YOUR_KEY",
+  authDomain: "PASTE.firebaseapp.com",
+  projectId: "PASTE_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let currentUser = null;
+
+document.getElementById("loginBtn").onclick = async () => {
+  console.log("Login clicked");
+
+  try {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+
+    currentUser = result.user;
+    document.getElementById("user").innerText = currentUser.displayName;
+
+    const ref = doc(db, "users", currentUser.uid);
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+      await setDoc(ref, {
+        name: currentUser.displayName,
+        points: 0
+      });
+    }
+
+    loadPoints();
+    loadLeaderboard();
+
+  } catch (error) {
+    console.error("ERROR:", error);
+  }
+};
+
+async function earn(p) {
+  const ref = doc(db, "users", currentUser.uid);
+  await updateDoc(ref, {
+    points: increment(p)
+  });
+}
+
+document.getElementById("clean").onclick = () => earn(20);
+document.getElementById("plant").onclick = () => earn(30);
+
+function loadPoints() {
+  const ref = doc(db, "users", currentUser.uid);
+  onSnapshot(ref, (docSnap) => {
+    document.getElementById("points").innerText = docSnap.data().points;
+  });
+}
+
+function loadLeaderboard() {
+  const q = query(collection(db, "users"), orderBy("points", "desc"));
+  onSnapshot(q, (snapshot) => {
+    let html = "<tr><th>Name</th><th>Points</th></tr>";
+    snapshot.forEach(doc => {
+      const d = doc.data();
+      html += `<tr><td>${d.name}</td><td>${d.points}</td></tr>`;
+    });
+    document.getElementById("board").innerHTML = html;
+  });
+}
+</script>
+
+document.getElementById("loginBtn").onclick = async () => {
+  const provider = new GoogleAuthProvider();
+  const result = await signInWithPopup(auth, provider);
+  currentUser = result.user;
+  document.getElementById("user").innerText = currentUser.displayName;
+
+  const ref = doc(db, "users", currentUser.uid);
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      name: currentUser.displayName,
+      points: 0
+    });
+  }
+
+  loadPoints();
+  loadLeaderboard();
+};
+
+// EARN POINTS
+async function earn(p) {
+  const ref = doc(db, "users", currentUser.uid);
+  await updateDoc(ref, {
+    points: increment(p)
+  });
+}
+
+document.getElementById("clean").onclick = () => earn(20);
+document.getElementById("plant").onclick = () => earn(30);
+
+// LOAD POINTS
+function loadPoints() {
+  const ref = doc(db, "users", currentUser.uid);
+  onSnapshot(ref, (docSnap) => {
+    document.getElementById("points").innerText = docSnap.data().points;
+  });
+}
+
+// LEADERBOARD
+function loadLeaderboard() {
+  const q = query(collection(db, "users"), orderBy("points", "desc"));
+  onSnapshot(q, (snapshot) => {
+    let html = "<tr><th>Name</th><th>Points</th></tr>";
+    snapshot.forEach(doc => {
+      const d = doc.data();
+      html += `<tr><td>${d.name}</td><td>${d.points}</td></tr>`;
+    });
+    document.getElementById("board").innerHTML = html;
+  });
+}
+</script>
+
+</body>
+</html>
