@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hamara Kartavya | Ultimate Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glass-card { background: white; border-radius: 15px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); padding: 24px; }
+        .btn-green { background: #16a34a; color: white; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; transition: 0.2s; }
+        .btn-green:hover { background: #15803d; transform: translateY(-2px); }
+    </style>
+</head>
+<body class="bg-green-50 p-4">
+
+    <div class="max-w-md mx-auto space-y-6">
+        <div class="bg-green-700 text-white p-8 rounded-2xl text-center shadow-lg">
+            <h1 class="text-3xl font-black italic">🌱 HAMARA KARTAVYA</h1>
+            <p class="opacity-80">Our Responsibility, Our Future</p>
+        </div>
+
+        <div class="glass-card text-center">
+            <div id="userSection" class="hidden mb-4">
+                <p class="text-gray-600">Welcome, <span id="userText" class="font-bold text-green-700">Explorer</span></p>
+                <div class="text-5xl font-black my-2" id="pointsDisplay">0</div>
+                <p class="text-xs uppercase text-gray-400 font-bold tracking-widest">Total Points</p>
+            </div>
+            <button id="loginBtn" class="w-full py-3 border-2 border-gray-200 rounded-xl font-bold flex items-center justify-center hover:bg-gray-50">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" class="w-5 mr-3">
+                Login with Google
+            </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <button id="cleanBtn" class="btn-green">✨ Clean Area<br><span class="text-xs font-normal">+20 pts</span></button>
+            <button id="plantBtn" class="btn-green">🌳 Plant Tree<br><span class="text-xs font-normal">+30 pts</span></button>
+        </div>
+
+        <div class="glass-card">
+            <h2 class="font-black text-xl mb-4 italic text-green-800 border-b pb-2">🌎 Leaderboard</h2>
+            <div id="leaderboardList" class="space-y-2 text-sm"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBKe3dEY3fC9qRYfo1g9H28hib9mbAxRqA",
+            authDomain: "hamara-kartavya.firebaseapp.com",
+            projectId: "hamara-kartavya",
+            storageBucket: "hamara-kartavya.firebasestorage.app",
+            messagingSenderId: "226726531719",
+            appId: "1:226726531719:web:3247269ebcbfe811421e22"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        // 1. LOGIN
+        document.getElementById('loginBtn').onclick = async () => {
+            try { await signInWithPopup(auth, provider); }
+            catch (e) { alert("Login Error! Add 127.0.0.1 to Firebase Authorized Domains."); }
+        };
+
+        // 2. USER SYNC
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                document.getElementById('loginBtn').classList.add('hidden');
+                document.getElementById('userSection').classList.remove('hidden');
+                document.getElementById('userText').innerText = user.displayName;
+
+                const userRef = doc(db, "users", user.uid);
+                const snap = await getDoc(userRef);
+                if (!snap.exists()) { await setDoc(userRef, { name: user.displayName, points: 0 }); }
+                onSnapshot(userRef, (d) => { document.getElementById('pointsDisplay').innerText = d.data().points; });
+            }
+        });
+
+        // 3. ACTION BUTTONS
+        const earn = async (amt) => {
+            if (!auth.currentUser) return alert("Login first!");
+            await updateDoc(doc(db, "users", auth.currentUser.uid), { points: increment(amt) });
+        };
+        document.getElementById('cleanBtn').onclick = () => earn(20);
+        document.getElementById('plantBtn').onclick = () => earn(30);
+
+        // 4. LEADERBOARD
+        const q = query(collection(db, "users"), orderBy("points", "desc"), limit(5));
+        onSnapshot(q, (snap) => {
+            let html = "";
+            snap.forEach(d => {
+                html += `<div class="flex justify-between p-2 bg-gray-50 rounded"><span>${d.data().name}</span><b>${d.data().points}</b></div>`;
+            });
+            document.getElementById('leaderboardList').innerHTML = html;
+        });
+    </script>
+</body>
+</html>
